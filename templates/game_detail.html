@@ -1,0 +1,168 @@
+{% load humanize %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>ゲーム詳細</title>
+
+    <!-- Bootstrap CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container py-4">
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="mb-4">
+        <h1 class="mb-2">{{ game.name }} <small class="text-muted">({{ game.date|date:"Y/n/j" }})</small></h1>
+
+        <div>
+            <a href="{% url 'game_list' %}" class="btn btn-outline-secondary btn-sm">一覧へ戻る</a>
+            <a href="{% url 'game_edit' game.id %}" class="btn btn-outline-primary btn-sm">編集</a>
+            <a href="{% url 'settlement' game.id %}" class="btn btn-success btn-sm">精算を見る</a>
+        </div>
+    </div>
+
+    <!-- 飲食登録 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">飲食登録</h5>
+
+            <form method="post" action="{% url 'add_order' game.id %}">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">過去メニューから選択</label>
+                    <select id="pastMenu" class="form-select">
+                        <option value="">選択してください</option>
+                        {% for item in past_orders %}
+                        <option value="{{ item.price }}" data-name="{{ item.name }}">
+                            {{ item.name }} ({{ item.price }}円)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {{ order_form.as_p }}
+
+                <button type="submit" class="btn btn-primary">登録</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- リバイ登録 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">リバイ登録</h5>
+            <form method="post" action="{% url 'add_rebuy' game.id %}">
+                {% csrf_token %}
+                {{ rebuy_form.as_p }}
+                <button type="submit" class="btn btn-warning">登録</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 最終チップ登録 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">最終チップ登録</h5>
+            <form method="post" action="{% url 'add_result' game.id %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <input type="number" name="final_chips" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-dark">登録</button>
+            </form>
+        </div>
+    </div>
+
+    {% load humanize %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">あなたの現在状況</h5>
+
+            <div class="row text-center mb-3">
+                <div class="col-4">
+                    <div class="fw-bold">最終チップ</div>
+                    <div class="fs-5">
+                        {% if result %}
+                        {{ result.final_chips|intcomma }} pt
+                        {% else %}
+                        未登録
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-4">
+                    <div class="fw-bold">リバイ合計</div>
+                    <div class="fs-5">
+                        {{ rebuy_count }} 回
+                    </div>
+                </div>
+
+                <div class="col-4">
+                    <div class="fw-bold">飲食合計</div>
+                    <div class="fs-5">
+                        {{ order_total|intcomma }} 円
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+
+            <h6>注文履歴</h6>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead>
+                    <tr>
+                        <th>品名</th>
+                        <th class="text-end">金額（円）</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for o in orders %}
+                    <tr>
+                        <td>{{ o.name }}</td>
+                        <td class="text-end">{{ o.price|intcomma }} 円</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center">注文なし</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+    document.getElementById("pastMenu").addEventListener("change", function() {
+        const selected = this.options[this.selectedIndex];
+        if (selected.value) {
+            document.getElementById("id_name").value = selected.dataset.name;
+            document.getElementById("id_price").value = selected.value;
+        }
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

@@ -11,6 +11,7 @@ urlpatterns = [
     path("<int:game_id>/order/", views.add_order, name="add_order"),
     path("<int:game_id>/rebuy/", views.add_rebuy, name="add_rebuy"),
     path("<int:game_id>/settlement/", views.settlement_view, name="settlement"),
+    path("<int:game_id>/ranking/", views.chip_ranking, name="chip_ranking"),
     path("<int:game_id>/edit/", views.game_edit, name="game_edit"),
 
     path("<int:game_id>/result/", views.add_result, name="add_result"),

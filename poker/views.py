@@ -314,6 +314,37 @@ def game_edit(request, game_id):
 # -------------------------
 
 @login_required
+def chip_ranking(request, game_id):
+    game = get_object_or_404(Game, pk=game_id)
+    rebuys = dict(game.rebuy_set.values("user_id").annotate(total=Sum("count")).values_list("user_id", "total"))
+    results = dict(game.result_set.order_by("id").values_list("user_id", "final_chips"))
+    ranking = []
+    unregistered = []
+    for user in game.participants.order_by("username"):
+        rebuy_count = rebuys.get(user.pk, 0)
+        total_buyin = game.initial_chips + rebuy_count * game.rebuy_chips
+        final_chips = results.get(user.pk)
+        row = {"user": user.username, "rebuy_count": rebuy_count,
+               "total_buyin": total_buyin, "final_chips": final_chips}
+        if final_chips is None:
+            unregistered.append(row)
+        else:
+            row["chip_diff"] = final_chips - total_buyin
+            ranking.append(row)
+    ranking.sort(key=lambda row: -row["chip_diff"])
+    previous = None
+    rank = 0
+    for index, row in enumerate(ranking, start=1):
+        if row["chip_diff"] != previous:
+            rank = index
+        row["rank"] = rank
+        previous = row["chip_diff"]
+    return render(request, "chip_ranking.html", {
+        "game": game, "ranking": ranking, "unregistered": unregistered,
+    })
+
+
+@login_required
 def settlement_view(request, game_id):
     game = get_object_or_404(Game, pk=game_id)
 

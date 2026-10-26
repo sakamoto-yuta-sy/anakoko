@@ -4,6 +4,41 @@ from django.urls import reverse
 from .models import Game, Order, Rebuy, Result
 
 
+class ChipRankingTests(TestCase):
+    def setUp(self):
+        self.users = [get_user_model().objects.create_user(name) for name in ["a", "b", "c", "d"]]
+        self.game = Game.objects.create(name="ランキング", date="2026-10-26", table_fee=0,
+                                       initial_chips=30000, rebuy_chips=30000, created_by=self.users[0])
+        self.game.participants.add(*self.users)
+        self.client.force_login(self.users[0])
+
+    def test_net_chips_determine_rank_with_ties_and_unregistered(self):
+        Rebuy.objects.create(game=self.game, user=self.users[0], count=2)
+        Rebuy.objects.create(game=self.game, user=self.users[0], count=1)
+        for user, chips in zip(self.users, [110000, 40000, 40000]):
+            Result.objects.create(game=self.game, user=user, final_chips=chips)
+        response = self.client.get(reverse("chip_ranking", args=[self.game.pk]))
+        rows = response.context["ranking"]
+        self.assertEqual([row["user"] for row in rows], ["b", "c", "a"])
+        self.assertEqual([row["rank"] for row in rows], [1, 1, 3])
+        self.assertEqual(rows[2]["total_buyin"], 120000)
+        self.assertEqual(rows[2]["chip_diff"], -10000)
+        self.assertEqual([row["user"] for row in response.context["unregistered"]], ["d"])
+        self.assertContains(response, "+10,000")
+        self.assertContains(response, "-10,000")
+
+    def test_zero_is_registered_and_fee_does_not_affect_ranking(self):
+        Result.objects.create(game=self.game, user=self.users[0], final_chips=0)
+        self.game.rebuy_fee = 999
+        self.game.save()
+        response = self.client.get(reverse("chip_ranking", args=[self.game.pk]))
+        self.assertEqual(response.context["ranking"][0]["chip_diff"], -30000)
+        self.assertEqual(len(response.context["unregistered"]), 3)
+        self.assertContains(self.client.get(reverse("game_detail", args=[self.game.pk])), reverse("chip_ranking", args=[self.game.pk]))
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("chip_ranking", args=[self.game.pk])).status_code, 302)
+
+
 class RebuySettlementTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user("player", password="1")

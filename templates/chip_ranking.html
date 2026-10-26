@@ -1,0 +1,55 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>チップランキング</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% include "shared_styles.html" %}
+</head>
+<body class="bg-light">
+<div class="container py-4">
+    <h2 class="mb-2">チップランキング</h2>
+    <p class="text-muted">{{ game.name }} · {{ game.date|date:"Y/n/j" }}</p>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table mobile-cards align-middle mb-0">
+                    <thead class="table-dark"><tr>
+                        <th>順位</th><th>ユーザー</th><th>リバイ回数</th><th>トータルバイイン（pt）</th><th>最終チップ（pt）</th><th>チップ収支（pt）</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for row in ranking %}
+                    <tr>
+                        <td data-label="順位" class="fw-bold">{{ row.rank }}位</td>
+                        <td data-label="ユーザー">{{ row.user }}</td>
+                        <td data-label="リバイ回数">{{ row.rebuy_count }}</td>
+                        <td data-label="トータルバイイン（pt）" class="text-end">{{ row.total_buyin|intcomma }}</td>
+                        <td data-label="最終チップ（pt）" class="text-end">{{ row.final_chips|intcomma }}</td>
+                        <td data-label="チップ収支（pt）" class="text-end fw-bold {% if row.chip_diff > 0 %}text-success{% elif row.chip_diff < 0 %}text-danger{% endif %}">{% if row.chip_diff > 0 %}+{% endif %}{{ row.chip_diff|intcomma }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center">最終チップの登録はまだありません</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% if unregistered %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>最終チップ未登録</h5>
+            <ul class="list-group list-group-flush">
+                {% for row in unregistered %}
+                <li class="list-group-item px-0">{{ row.user }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+    <a href="{% url 'game_detail' game.id %}" class="btn btn-outline-secondary">ゲーム詳細へ戻る</a>
+</div>
+</body>
+</html>

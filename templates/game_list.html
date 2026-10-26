@@ -8,16 +8,17 @@
     <title>ゲーム一覧</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% include "shared_styles.html" %}
 </head>
 <body class="bg-light">
 
 <div class="container py-4">
 
     <!-- ヘッダー -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-heading mb-4">
         <h2 class="mb-0">ゲーム一覧</h2>
 
-        <div class="d-flex gap-2">
+        <div class="page-actions">
             {% if user.is_staff or user.is_superuser %}
             <a href="{% url 'user_create' %}" class="btn btn-outline-primary btn-sm">ユーザー作成</a>
             <a href="{% url 'user_password_reset' %}" class="btn btn-outline-secondary btn-sm">パスワードリセット</a>
@@ -43,7 +44,7 @@
         <div class="card-body p-0">
 
             <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0">
+                <table class="table mobile-cards game-table align-middle mb-0">
                     <thead class="table-dark text-center">
                     <tr>
                         <th>ゲーム名</th>

@@ -4,91 +4,44 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>ゲーム清算</title>
+    <title>ゲーム精算</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
 
     <!-- Bootstrap CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% include "shared_styles.html" %}
 </head>
 
-<div class="container py-4">
+<body class="bg-light">
+<div class="container py-4 money-summary">
 
     <div class="card mb-4">
         <div class="card-body">
-            <h4 class="card-title mb-3">精算一覧</h4>
+            <h4 class="card-title mb-2">精算一覧</h4>
+            <p class="text-muted mb-3">{{ game.name }} · {{ game.date|date:"Y/n/j" }}</p>
 
             <div class="table-responsive">
-                <table class="table table-striped table-bordered align-middle">
+                <table class="table mobile-cards align-middle">
                     <thead class="table-dark text-center">
-                    <tr>
-                        <th>ユーザー</th>
-                        <th>初期点 (pt)</th>
-                        <th>リバイ</th>
-                        <th>総開始点 (pt)</th>
-                        <th>最終点 (pt)</th>
-                        <th>チップ収支 (pt)</th>
-                        <th>換算額 (円)</th>
-                        <th>飲食代 (円)</th>
-                        <th>テーブル代 (円)</th>
-                        <th>最終清算額 (円)</th>
-                    </tr>
+                    <tr><th>ユーザー</th><th>飲食代（円）</th><th>テーブル代（円）</th><th>リバイ回数</th><th>リバイ料金（円）</th><th>精算額（円）</th></tr>
                     </thead>
                     <tbody>
                     {% for s in settlements %}
                     <tr>
-                        <td>{{ s.user }}</td>
-
-                        {% if s.unregistered %}
-                        <td colspan="9" class="text-center text-danger fw-bold">
-                            未登録
-                        </td>
-                        {% else %}
-                        <td class="text-end">{{ s.initial_chips|floatformat:0|intcomma }}</td>
-                        <td class="text-center">{{ s.rebuy_count }}</td>
-                        <td class="text-end">{{ s.start_chips|floatformat:0|intcomma }}</td>
-                        <td class="text-end">{{ s.final_chips|floatformat:0|intcomma }}</td>
-
-                        <td class="text-end
-                                    {% if s.chip_diff > 0 %}text-success
-                                    {% elif s.chip_diff < 0 %}text-danger
-                                    {% endif %}">
-                            {{ s.chip_diff|floatformat:0|intcomma }}
-                        </td>
-
-                        <td class="text-end">{{ s.chip_money|floatformat:0|intcomma }}</td>
-                        <td class="text-end">{{ s.orders|floatformat:0|intcomma }}</td>
-                        <td class="text-end">{{ s.table_share|floatformat:0|intcomma }}</td>
-
-                        <td class="text-end fw-bold">
-                            {{ s.final_payment|floatformat:0|intcomma }}
-                        </td>
-                        {% endif %}
+                        <td data-label="ユーザー">{{ s.user }}</td>
+                        <td class="text-end" data-label="飲食代（円）">{{ s.orders|intcomma }}</td>
+                        <td class="text-end" data-label="テーブル代（円）">{{ s.table_share|intcomma }}</td>
+                        <td class="text-end" data-label="リバイ回数">{{ s.rebuy_count }}</td>
+                        <td class="text-end" data-label="リバイ料金（円）">{{ s.rebuy_total|intcomma }}</td>
+                        <td class="text-end fw-bold" data-label="精算額（円）">{{ s.final_payment|intcomma }}</td>
                     </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center">参加者が登録されていません</td></tr>
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
-        </div>
-    </div>
-
-    <!-- チップ合計チェック -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5>チップ増減 合計</h5>
-            <div class="fs-5 fw-bold text-end">
-                {{ total_chip_diff|floatformat:0|intcomma }} pt
-            </div>
-
-            {% if is_balanced %}
-            <div class="alert alert-success mt-3 mb-0">
-                ✔ チップ合計は0です
-            </div>
-            {% else %}
-            <div class="alert alert-danger mt-3 mb-0">
-                ⚠ チップ合計が0ではありません
-            </div>
-            {% endif %}
         </div>
     </div>
 
@@ -152,6 +105,20 @@
         </div>
     </div>
 
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>リバイ料金</h5>
+            <div class="d-flex justify-content-between">
+                <span>1回あたり</span>
+                <span>{{ game.rebuy_fee|intcomma }} 円</span>
+            </div>
+            <div class="d-flex justify-content-between fs-5 fw-bold">
+                <span>合計</span>
+                <span>{{ total_rebuy_fee|intcomma }} 円</span>
+            </div>
+        </div>
+    </div>
+
     <div class="text-center">
         <a href="{% url 'game_detail' game.id %}" class="btn btn-secondary">
             戻る
@@ -159,3 +126,5 @@
     </div>
 
 </div>
+</body>
+</html>

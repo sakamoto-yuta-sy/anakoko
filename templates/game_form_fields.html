@@ -1,0 +1,70 @@
+<style>
+    .game-fields input { font-size: 16px; min-height: 44px; }
+    .participant-toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+    .participant-toolbar button { min-height: 44px; }
+    .participant-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+    .participant-option { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; cursor: pointer; overflow-wrap: anywhere; }
+    .participant-option:has(input:checked) { background: #e7f1ff; border-color: #0d6efd; }
+    .participant-option input { flex: 0 0 22px; width: 22px; height: 22px; min-height: 22px; accent-color: #0d6efd; }
+    .participant-option[hidden] { display: none; }
+    @media (max-width: 359px) { .participant-list { grid-template-columns: 1fr; } }
+</style>
+<div class="game-fields">
+    {% for error in form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endfor %}
+    {% for field in form %}
+        {% if field.name == 'participants' %}
+        <fieldset class="mb-4" id="participant-picker">
+            <legend class="fs-6 fw-bold">参加者</legend>
+            <label for="participant-search" class="form-label">名前で検索</label>
+            <input type="search" id="participant-search" class="form-control mb-2" placeholder="ユーザー名を入力" autocomplete="off">
+            <div class="participant-toolbar">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="participants-select">全員を選択</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="participants-clear">全員を解除</button>
+            </div>
+            <p class="small mt-2 mb-0" id="participant-count" role="status" aria-live="polite"></p>
+            {% for error in field.errors %}<div class="text-danger" role="alert">{{ error }}</div>{% endfor %}
+            <div class="participant-list">
+                {% for option in field %}
+                <label class="participant-option" for="{{ option.id_for_label }}">
+                    {{ option.tag }}<span>{{ option.choice_label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="text-muted mt-3" id="participants-empty" hidden>該当するユーザーがいません</p>
+        </fieldset>
+        {% else %}
+        <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<div class="text-danger" role="alert">{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+<script>
+(() => {
+    const picker = document.getElementById('participant-picker');
+    const search = document.getElementById('participant-search');
+    const rows = Array.from(picker.querySelectorAll('.participant-option'));
+    const select = document.getElementById('participants-select');
+    const clear = document.getElementById('participants-clear');
+    function update() {
+        const query = search.value.trim().toLocaleLowerCase();
+        rows.forEach(row => { row.hidden = !row.textContent.toLocaleLowerCase().includes(query); });
+        const selected = rows.filter(row => row.querySelector('input').checked).length;
+        document.getElementById('participant-count').textContent = `${selected}人選択中 / 全${rows.length}人`;
+        document.getElementById('participants-empty').hidden = rows.some(row => !row.hidden);
+        select.textContent = query ? '表示中を選択' : '全員を選択';
+        clear.textContent = query ? '表示中を解除' : '全員を解除';
+    }
+    search.addEventListener('input', update);
+    picker.addEventListener('change', update);
+    function setVisible(checked) {
+        rows.filter(row => !row.hidden).forEach(row => { row.querySelector('input').checked = checked; });
+        update();
+    }
+    select.addEventListener('click', () => setVisible(true));
+    clear.addEventListener('click', () => setVisible(false));
+    update();
+})();
+</script>

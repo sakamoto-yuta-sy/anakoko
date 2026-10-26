@@ -10,10 +10,10 @@ urlpatterns = [
     path("<int:game_id>/", views.game_detail, name="game_detail"),
     path("<int:game_id>/order/", views.add_order, name="add_order"),
     path("<int:game_id>/rebuy/", views.add_rebuy, name="add_rebuy"),
-    path("<int:game_id>/result/", views.add_result, name="add_result"),
     path("<int:game_id>/settlement/", views.settlement_view, name="settlement"),
     path("<int:game_id>/edit/", views.game_edit, name="game_edit"),
 
+    path("<int:game_id>/result/", views.add_result, name="add_result"),
     path("admin/", admin.site.urls),
     path("users/create/", views.user_create, name="user_create"),
     path("users/password/reset/", views.user_password_reset, name="user_password_reset"),

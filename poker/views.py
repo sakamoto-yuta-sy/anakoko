@@ -66,6 +66,15 @@ def user_password_reset(request):
 # -------------------------
 
 class GameForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["participants"].queryset = User.objects.order_by("username")
+        if not self.instance.pk and not self.is_bound:
+            self.initial.setdefault("date", timezone.localdate())
+        for name, field in self.fields.items():
+            if name != "participants":
+                field.widget.attrs.update({"class": "form-control"})
+
     class Meta:
         model = Game
         fields = [
@@ -73,19 +82,19 @@ class GameForm(forms.ModelForm):
             "date",
             "table_fee",
             "initial_chips",
-            "chip_rate",
+            "rebuy_fee",
             "rebuy_chips",
             "participants",
         ]
 
+        labels = {
+            "name": "ゲーム名", "date": "日付", "table_fee": "テーブル代（円）",
+            "initial_chips": "初期チップ（pt）", "rebuy_chips": "リバイチップ数（pt）",
+            "participants": "参加者",
+        }
         widgets = {
-            "date": forms.DateInput(
-                attrs={
-                    "class": "form-control",
-                    "type": "date",  # ← これがカレンダー表示
-                    "value": timezone.now().date()
-                }
-            )
+            "date": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "participants": forms.CheckboxSelectMultiple(),
         }
 
 
@@ -93,6 +102,8 @@ class OrderForm(forms.ModelForm):
     class Meta:
         model = Order
         fields = ["name", "price"]
+        labels = {"name": "品名", "price": "金額（円）"}
+        widgets = {"price": forms.NumberInput(attrs={"inputmode": "numeric"})}
 
 
 class RebuyForm(forms.ModelForm):
@@ -103,6 +114,7 @@ class RebuyForm(forms.ModelForm):
     ]
 
     count = forms.ChoiceField(
+        label="リバイ回数",
         choices=COUNT_CHOICES,
         widget=forms.Select
     )
@@ -175,10 +187,10 @@ def game_detail(request, game_id):
             or 0
     )
 
+    result = Result.objects.filter(game=game, user=request.user).first()
     order_form = OrderForm()
     rebuy_form = RebuyForm()
 
-    result = Result.objects.filter(game=game, user=request.user).first()
     rebuy_count = (
             Rebuy.objects
             .filter(game=game, user=request.user)
@@ -190,8 +202,9 @@ def game_detail(request, game_id):
         "order_form": order_form,
         "rebuy_form": rebuy_form,
         "past_orders": past_orders,
-        "rebuy_count": rebuy_count,
         "result": result,
+        "rebuy_count": rebuy_count,
+        "rebuy_total": rebuy_count * game.rebuy_fee,
         "orders": orders,
         "order_total": order_total,
     }
@@ -206,6 +219,9 @@ def game_detail(request, game_id):
 @login_required
 def add_order(request, game_id):
     game = get_object_or_404(Game, pk=game_id)
+    if not game.participants.filter(pk=request.user.pk).exists():
+        raise PermissionDenied
+
 
     past_orders = (
         Order.objects
@@ -240,6 +256,9 @@ def add_order(request, game_id):
 @login_required
 def add_rebuy(request, game_id):
     game = get_object_or_404(Game, id=game_id)
+    if not game.participants.filter(pk=request.user.pk).exists():
+        raise PermissionDenied
+
 
     if request.method == "POST":
         form = RebuyForm(request.POST)
@@ -283,19 +302,11 @@ def add_result(request, game_id):
 def game_edit(request, game_id):
     game = get_object_or_404(Game, pk=game_id)
 
-    if request.method == "POST":
-        game.name = request.POST.get("name")
-        game.initial_chips = request.POST.get("initial_chips")
-        game.chip_rate = request.POST.get("chip_rate")
-        game.rebuy_chips = request.POST.get("rebuy_chips")
-        game.table_fee = request.POST.get("table_fee")
-
-        game.save()
+    form = GameForm(request.POST if request.method == "POST" else None, instance=game)
+    if request.method == "POST" and form.is_valid():
+        form.save()
         return redirect("game_detail", game_id=game.id)
-
-    return render(request, "game_edit.html", {
-        "game": game
-    })
+    return render(request, "game_edit.html", {"game": game, "form": form})
 
 
 # -------------------------
@@ -306,14 +317,7 @@ def game_edit(request, game_id):
 def settlement_view(request, game_id):
     game = get_object_or_404(Game, pk=game_id)
 
-    (
-        settlements,
-        total_chip_diff,
-        is_balanced,
-        total_orders,
-        total_table_fee,
-        shop_total
-    ) = game.calculate_settlement()
+    settlement = game.calculate_settlement()
 
     all_orders = (
         Order.objects
@@ -328,11 +332,6 @@ def settlement_view(request, game_id):
 
     return render(request, "settlement.html", {
         "game": game,
-        "settlements": settlements,
-        "total_chip_diff": total_chip_diff,
-        "is_balanced": is_balanced,
-        "total_orders": total_orders,
-        "total_table_fee": total_table_fee,
-        "shop_total": shop_total,
+        **settlement,
         "all_orders": all_orders,
     })

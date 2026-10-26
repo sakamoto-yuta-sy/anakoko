@@ -1,0 +1,11 @@
+{% extends "user_management_base.html" %}
+{% block title %}ユーザー作成{% endblock %}
+{% block content %}
+<h3 class="mb-4">ユーザー作成</h3>
+<p>初期パスワードはユーザー名と同じです。作成したユーザーは一般ユーザーになります。</p>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">ユーザーを作成</button>
+</form>
+{% endblock %}

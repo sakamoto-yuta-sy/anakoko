@@ -7,6 +7,58 @@ from django import forms
 from django.db.models import Max
 from django.utils import timezone
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+from django.contrib.auth import update_session_auth_hash
+from functools import wraps
+
+
+def administrator_required(view):
+    @login_required
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if not (request.user.is_active and (request.user.is_staff or request.user.is_superuser)):
+            raise PermissionDenied
+        return view(request, *args, **kwargs)
+    return wrapped
+
+
+class ManagedUserForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ["username"]
+        widgets = {"username": forms.TextInput(attrs={"class": "form-control"})}
+
+
+@administrator_required
+def user_create(request):
+    form = ManagedUserForm(request.POST if request.method == "POST" else None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save(commit=False)
+        user.set_password(user.username)
+        user.save()
+        messages.success(request, f"ユーザー「{user.username}」を作成しました。初期パスワードはユーザー名と同じです。")
+        return redirect("user_create")
+    return render(request, "user_create.html", {"form": form})
+
+
+@administrator_required
+def user_password_reset(request):
+    class ResetForm(forms.Form):
+        user = forms.ModelChoiceField(
+            queryset=User.objects.order_by("username"), label="対象ユーザー",
+            widget=forms.Select(attrs={"class": "form-select"}),
+        )
+
+    form = ResetForm(request.POST if request.method == "POST" else None)
+    if request.method == "POST" and form.is_valid():
+        user = form.cleaned_data["user"]
+        user.set_password(user.username)
+        user.save(update_fields=["password"])
+        if user.pk == request.user.pk:
+            update_session_auth_hash(request, user)
+        messages.success(request, f"ユーザー「{user.username}」のパスワードをユーザー名と同じにリセットしました。")
+        return redirect("user_password_reset")
+    return render(request, "user_password_reset.html", {"form": form})
 
 
 # -------------------------

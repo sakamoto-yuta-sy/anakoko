@@ -15,6 +15,8 @@ urlpatterns = [
     path("<int:game_id>/edit/", views.game_edit, name="game_edit"),
 
     path("admin/", admin.site.urls),
+    path("users/create/", views.user_create, name="user_create"),
+    path("users/password/reset/", views.user_password_reset, name="user_password_reset"),
 
     path(
         "login/",
@@ -22,4 +24,14 @@ urlpatterns = [
         name="login",
     ),
     path("logout/", LogoutView.as_view(next_page="login"), name="logout"),
+    path(
+        "password/change/",
+        auth_views.PasswordChangeView.as_view(template_name="password_change.html"),
+        name="password_change",
+    ),
+    path(
+        "password/change/done/",
+        auth_views.PasswordChangeDoneView.as_view(template_name="password_change_done.html"),
+        name="password_change_done",
+    ),
 ]

@@ -18,6 +18,13 @@
         <h2 class="mb-0">ゲーム一覧</h2>
 
         <div class="d-flex gap-2">
+            {% if user.is_staff or user.is_superuser %}
+            <a href="{% url 'user_create' %}" class="btn btn-outline-primary btn-sm">ユーザー作成</a>
+            <a href="{% url 'user_password_reset' %}" class="btn btn-outline-secondary btn-sm">パスワードリセット</a>
+            {% endif %}
+            <a href="{% url 'password_change' %}" class="btn btn-outline-secondary btn-sm">
+                パスワード変更
+            </a>
             <a href="{% url 'game_create' %}" class="btn btn-primary btn-sm">
                 ＋ 作成
             </a>

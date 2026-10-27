@@ -38,6 +38,40 @@ class ChipRankingTests(TestCase):
         self.client.logout()
         self.assertEqual(self.client.get(reverse("chip_ranking", args=[self.game.pk])).status_code, 302)
 
+    def test_chip_check_incomplete_and_zero_input(self):
+        Rebuy.objects.create(game=self.game, user=self.users[0], count=2)
+        Result.objects.create(game=self.game, user=self.users[0], final_chips=0)
+        response = self.client.get(reverse("chip_check", args=[self.game.pk]))
+        self.assertEqual(response.context["total_buyin"], 180000)
+        self.assertEqual(response.context["registered_count"], 1)
+        self.assertIsNone(response.context["difference"])
+        self.assertContains(response, "未入力者がいるため")
+        self.assertContains(self.client.get(reverse("chip_ranking", args=[self.game.pk])), reverse("chip_check", args=[self.game.pk]))
+
+    def test_chip_check_balanced_rake_and_excess(self):
+        Rebuy.objects.create(game=self.game, user=self.users[0], count=1)
+        for user in self.users:
+            Result.objects.create(game=self.game, user=user, final_chips=30000)
+        for final, difference, message in [
+            (60000, 0, "一致しています"),
+            (58000, -2000, "レーキや入力差分"),
+            (61000, 1000, "多くなっています"),
+        ]:
+            Result.objects.filter(game=self.game, user=self.users[0]).update(final_chips=final)
+            response = self.client.get(reverse("chip_check", args=[self.game.pk]))
+            self.assertEqual(response.context["difference"], difference)
+            self.assertContains(response, message)
+            self.assertEqual(sum(row["chip_diff"] for row in response.context["rows"]), difference)
+
+    def test_chip_check_no_participants_and_access(self):
+        self.game.participants.clear()
+        response = self.client.get(reverse("chip_check", args=[self.game.pk]))
+        self.assertIsNone(response.context["difference"])
+        self.assertContains(response, "参加者が登録されていません")
+        self.assertEqual(self.client.get(reverse("chip_check", args=[999999])).status_code, 404)
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("chip_check", args=[self.game.pk])).status_code, 302)
+
 
 class RebuySettlementTests(TestCase):
     def setUp(self):

@@ -12,6 +12,7 @@
 <div class="container py-4">
     <h2 class="mb-2">チップランキング</h2>
     <p class="text-muted">{{ game.name }} · {{ game.date|date:"Y/n/j" }}</p>
+    <a href="{% url 'chip_check' game.id %}" class="btn btn-outline-primary mb-3">チップ集計チェック</a>
     <div class="card mb-4">
         <div class="card-body">
             <div class="table-responsive">

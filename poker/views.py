@@ -313,9 +313,7 @@ def game_edit(request, game_id):
 # 精算表示
 # -------------------------
 
-@login_required
-def chip_ranking(request, game_id):
-    game = get_object_or_404(Game, pk=game_id)
+def chip_rows(game):
     rebuys = dict(game.rebuy_set.values("user_id").annotate(total=Sum("count")).values_list("user_id", "total"))
     results = dict(game.result_set.order_by("id").values_list("user_id", "final_chips"))
     ranking = []
@@ -331,6 +329,13 @@ def chip_ranking(request, game_id):
         else:
             row["chip_diff"] = final_chips - total_buyin
             ranking.append(row)
+    return ranking, unregistered
+
+
+@login_required
+def chip_ranking(request, game_id):
+    game = get_object_or_404(Game, pk=game_id)
+    ranking, unregistered = chip_rows(game)
     ranking.sort(key=lambda row: -row["chip_diff"])
     previous = None
     rank = 0
@@ -341,6 +346,23 @@ def chip_ranking(request, game_id):
         previous = row["chip_diff"]
     return render(request, "chip_ranking.html", {
         "game": game, "ranking": ranking, "unregistered": unregistered,
+    })
+
+
+@login_required
+def chip_check(request, game_id):
+    game = get_object_or_404(Game, pk=game_id)
+    registered, missing = chip_rows(game)
+    rows = sorted(registered + missing, key=lambda row: row["user"])
+    total_buyin = sum(row["total_buyin"] for row in rows)
+    total_final = sum(row["final_chips"] for row in registered)
+    complete = bool(rows) and not missing
+    difference = total_final - total_buyin if complete else None
+    return render(request, "chip_check.html", {
+        "game": game, "rows": rows, "missing": missing,
+        "registered_count": len(registered), "participant_count": len(rows),
+        "total_buyin": total_buyin, "total_final": total_final,
+        "difference": difference, "reduction": -difference if difference is not None else None,
     })
 
 
